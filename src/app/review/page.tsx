@@ -10,10 +10,10 @@ import { Pokeball } from '@/components/PokeUI'
 type Filter = 'all' | 'unknown' | 'uncertain' | 'wrong'
 
 const FILTER_OPTIONS: { value: Filter; label: string }[] = [
-  { value: 'all',      label: 'すべて' },
-  { value: 'unknown',  label: '❓ わからない' },
-  { value: 'uncertain',label: '🤔 あいまい' },
-  { value: 'wrong',    label: '❌ 不正解' },
+  { value: 'all',       label: 'すべて' },
+  { value: 'unknown',   label: '❓ わからない' },
+  { value: 'uncertain', label: '🤔 あいまい' },
+  { value: 'wrong',     label: '❌ 不正解' },
 ]
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -32,6 +32,8 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true)
   const [retryLoading, setRetryLoading] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  // Per-item answer state: null = not answered, string = chosen option
+  const [answers, setAnswers] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function load() {
@@ -45,7 +47,6 @@ export default function ReviewPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      // Deduplicate by question text (keep latest)
       const seen = new Set<string>()
       const deduped = (data ?? []).filter((item: ReviewItem) => {
         const key = item.question_data.question
@@ -89,6 +90,19 @@ export default function ReviewPage() {
     })
   }
 
+  function handleAnswer(itemId: string, chosen: string) {
+    if (answers[itemId]) return // already answered
+    setAnswers(prev => ({ ...prev, [itemId]: chosen }))
+  }
+
+  function resetAnswer(itemId: string) {
+    setAnswers(prev => {
+      const next = { ...prev }
+      delete next[itemId]
+      return next
+    })
+  }
+
   return (
     <div className="min-h-screen bg-red-50">
       <header className="bg-red-600 text-white shadow sticky top-0 z-10">
@@ -106,7 +120,7 @@ export default function ReviewPage() {
               disabled={retryLoading !== null}
               className="bg-white text-red-700 hover:bg-red-50 disabled:opacity-50 text-xs font-black px-3 py-1.5 rounded-lg transition-colors shrink-0"
             >
-              {retryLoading === 'all' ? '準備中...' : `⚡ ${filtered.length}問 再挑戦`}
+              {retryLoading === 'all' ? '準備中...' : `⚡ ${filtered.length}問 まとめて再挑戦`}
             </button>
           )}
         </div>
@@ -150,7 +164,10 @@ export default function ReviewPage() {
               {filtered.map(item => {
                 const isOpen = expanded.has(item.id)
                 const catColor = CATEGORY_COLORS[item.question_data.category] ?? 'bg-gray-100 text-gray-700'
-                const correctIdx = OPTION_LABELS.indexOf(item.question_data.correct_answer)
+                const correct = item.question_data.correct_answer
+                const chosen = answers[item.id] ?? null
+                const isAnswered = chosen !== null
+                const isCorrect = chosen === correct
                 const isReading = item.question_data.category === '読解'
 
                 return (
@@ -173,9 +190,11 @@ export default function ReviewPage() {
                             {item.original_flag_status === 'unknown' ? '❓' : '🤔'}
                           </span>
                         )}
+                        {isAnswered && (
+                          <span className="text-sm">{isCorrect ? '✅' : '❌'}</span>
+                        )}
                       </div>
-                      {/* Show 2 lines when collapsed, full text when open */}
-                      <p className={`flex-1 text-sm text-gray-800 leading-relaxed ${!isOpen && !isReading ? 'line-clamp-2' : !isOpen && isReading ? 'line-clamp-1' : ''}`}>
+                      <p className={`flex-1 text-sm text-gray-800 leading-relaxed ${!isOpen ? 'line-clamp-2' : ''}`}>
                         {item.question_data.question}
                       </p>
                       <span className="text-gray-400 text-xs shrink-0 mt-0.5">{isOpen ? '▲' : '▼'}</span>
@@ -184,49 +203,68 @@ export default function ReviewPage() {
                     {/* Expanded content */}
                     {isOpen && (
                       <div className="px-5 pb-5 border-t-2 border-amber-100 pt-4 space-y-3">
-                        {/* For reading comprehension, show full question text again in expanded area */}
+                        {/* Reading comprehension: show full passage */}
                         {isReading && (
                           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                             {item.question_data.question}
                           </div>
                         )}
 
-                        {/* Options */}
+                        {/* Options — interactive until answered */}
                         <div className="space-y-2">
                           {item.question_data.options.map((opt, idx) => {
-                            const isCorrect = idx === correctIdx
+                            const label = OPTION_LABELS[idx]
+                            const isThisCorrect = label === correct
+                            const isThisChosen = label === chosen
+
+                            let style = 'border-gray-200 text-gray-700 hover:border-red-400 hover:bg-red-50 cursor-pointer'
+                            if (isAnswered) {
+                              if (isThisCorrect) {
+                                style = 'border-green-500 bg-green-50 text-green-800'
+                              } else if (isThisChosen) {
+                                style = 'border-red-400 bg-red-50 text-red-800'
+                              } else {
+                                style = 'border-gray-200 text-gray-400 cursor-default'
+                              }
+                            }
+
                             return (
-                              <div
-                                key={idx}
-                                className={`px-4 py-2.5 rounded-xl text-sm border-2 font-medium ${
-                                  isCorrect
-                                    ? 'border-green-500 bg-green-50 text-green-800'
-                                    : 'border-gray-200 text-gray-500'
-                                }`}
+                              <button
+                                key={label}
+                                onClick={() => handleAnswer(item.id, label)}
+                                disabled={isAnswered}
+                                className={`w-full text-left px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all disabled:cursor-default ${style}`}
                               >
-                                {isCorrect && <span className="mr-1.5">✅</span>}
-                                <span className="font-black">{OPTION_LABELS[idx]}.</span>{' '}
+                                {isAnswered && isThisCorrect && <span className="mr-1.5">✅</span>}
+                                {isAnswered && isThisChosen && !isThisCorrect && <span className="mr-1.5">❌</span>}
+                                <span className="font-black">{label}.</span>{' '}
                                 {opt.replace(/^[A-D]\.\s*/, '')}
-                              </div>
+                              </button>
                             )
                           })}
                         </div>
 
-                        {/* Explanation */}
-                        {item.question_data.explanation && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-                            <span className="font-black">解説：</span>{item.question_data.explanation}
-                          </div>
+                        {/* Feedback after answering */}
+                        {isAnswered && (
+                          <>
+                            <div className={`rounded-xl px-4 py-3 text-sm border-2 font-medium ${
+                              isCorrect
+                                ? 'bg-green-50 border-green-300 text-green-800'
+                                : 'bg-red-50 border-red-300 text-red-800'
+                            }`}>
+                              {isCorrect ? '✅ 正解！やった！' : `❌ 不正解... 正解は ${correct} です`}
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                              <span className="font-black">解説：</span>{item.question_data.explanation}
+                            </div>
+                            <button
+                              onClick={() => resetAnswer(item.id)}
+                              className="text-xs text-gray-400 hover:text-gray-600 underline"
+                            >
+                              もう一度この問題を解く
+                            </button>
+                          </>
                         )}
-
-                        {/* Retry button */}
-                        <button
-                          onClick={() => startRetry([item], item.id)}
-                          disabled={retryLoading !== null}
-                          className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-black py-2.5 rounded-xl transition-colors"
-                        >
-                          {retryLoading === item.id ? '準備中...' : '⚡ この問題を再挑戦する →'}
-                        </button>
                       </div>
                     )}
                   </div>
