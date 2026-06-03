@@ -6,6 +6,7 @@ import Link from 'next/link'
 import QuestionCard from '@/components/QuestionCard'
 import ExamProgress from '@/components/ExamProgress'
 import { ExamQuestion, FlagStatus } from '@/lib/types'
+import { Pokeball } from '@/components/PokeUI'
 
 type AnswerResult = {
   is_correct: boolean
@@ -26,7 +27,6 @@ export default function ExamPage() {
       .then(r => r.json())
       .then(data => {
         setQuestions(data.questions)
-        // Resume at first unanswered question
         const firstUnanswered = data.questions.findIndex((q: ExamQuestion) => q.user_answer === null)
         setCurrent(firstUnanswered >= 0 ? firstUnanswered : 0)
         setLoading(false)
@@ -55,8 +55,11 @@ export default function ExamPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">読み込み中...</p>
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="text-center">
+          <div className="anim-float inline-block mb-3"><Pokeball size={48} /></div>
+          <p className="text-gray-500 font-bold">読み込み中...</p>
+        </div>
       </div>
     )
   }
@@ -66,31 +69,34 @@ export default function ExamPage() {
   const allAnswered = answered === questions.length
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-indigo-700 text-white shadow sticky top-0 z-10">
+    <div className="min-h-screen bg-red-50">
+      <header className="bg-red-600 text-white shadow sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/dashboard" className="text-indigo-200 hover:text-white text-sm">← ダッシュボード</Link>
-          <h1 className="text-sm font-semibold">JLPT N2 模擬試験</h1>
-          <div className="w-20" />
+          <Link href="/dashboard" className="text-red-200 hover:text-white text-sm">← やめる</Link>
+          <div className="flex items-center gap-2">
+            <Pokeball size={18} />
+            <h1 className="text-sm font-black">N2 バトル！</h1>
+          </div>
+          <span className="text-red-200 text-xs font-bold">{answered}/{questions.length}問</span>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-2xl mx-auto px-4 py-5 space-y-4">
         <ExamProgress current={current} total={questions.length} answered={answered} />
 
         {/* Question navigator */}
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="flex flex-wrap gap-1.5">
           {questions.map((q, i) => (
             <button
               key={q.id}
               onClick={() => setCurrent(i)}
-              className={`w-8 h-8 rounded-lg text-xs font-semibold border-2 transition-all ${
+              className={`w-8 h-8 rounded-lg text-xs font-black border-2 transition-all ${
                 i === current
-                  ? 'border-indigo-500 bg-indigo-500 text-white'
+                  ? 'border-red-500 bg-red-500 text-white'
                   : q.flag_status === 'unknown'
                   ? 'border-red-400 bg-red-50 text-red-600'
                   : q.flag_status === 'uncertain'
-                  ? 'border-yellow-400 bg-yellow-50 text-yellow-600'
+                  ? 'border-amber-400 bg-amber-50 text-amber-600'
                   : q.user_answer !== null
                   ? q.is_correct
                     ? 'border-green-400 bg-green-50 text-green-700'
@@ -114,30 +120,30 @@ export default function ExamPage() {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between gap-3 pt-2">
+        <div className="flex justify-between gap-3 pt-1">
           <button
             onClick={() => setCurrent(c => Math.max(0, c - 1))}
             disabled={current === 0}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-40"
           >
-            ← 前の問題
+            ← 前へ
           </button>
 
           {current < questions.length - 1 ? (
             <button
               onClick={() => setCurrent(c => c + 1)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium text-white"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-black text-white"
             >
-              次の問題 →
+              次へ →
             </button>
           ) : (
             <button
               onClick={handleComplete}
               disabled={completing || !allAnswered}
-              title={!allAnswered ? `未回答の問題が${questions.length - answered}問あります` : ''}
-              className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl text-sm font-bold text-white transition-colors"
+              title={!allAnswered ? `未回答 ${questions.length - answered}問あります` : ''}
+              className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl text-sm font-black text-white transition-colors"
             >
-              {completing ? '採点中...' : allAnswered ? '試験を終了して採点する ✓' : `未回答 ${questions.length - answered}問`}
+              {completing ? '採点中...' : allAnswered ? '⚡ 結果を見る！' : `未回答 ${questions.length - answered}問`}
             </button>
           )}
         </div>

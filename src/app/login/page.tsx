@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Pokeball, PikachuMascot } from '@/components/PokeUI'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       if (error.message.includes('Email not confirmed')) {
-        setError('メールアドレスが未確認です。登録時に届いたメールのリンクをクリックしてください。')
+        setError('メールアドレスが未確認です。確認メールのリンクをクリックしてください。')
       } else {
         setError('メールアドレスまたはパスワードが正しくありません')
       }
@@ -32,60 +33,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100 px-4">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700">日本語 N2</h1>
-          <p className="text-gray-500 mt-1">模擬試験アプリ</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-red-700 via-red-600 to-red-500 flex flex-col items-center justify-center px-4 py-8">
+      {/* Pokeball decorations */}
+      <div className="absolute top-8 left-8 opacity-20 anim-float" style={{ animationDelay: '0s' }}>
+        <Pokeball size={60} />
+      </div>
+      <div className="absolute top-20 right-10 opacity-15 anim-float" style={{ animationDelay: '1s' }}>
+        <Pokeball size={40} />
+      </div>
+      <div className="absolute bottom-16 left-12 opacity-15 anim-float" style={{ animationDelay: '0.5s' }}>
+        <Pokeball size={50} />
+      </div>
 
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">ログイン</h2>
+      {/* Mascot + title */}
+      <div className="text-center mb-6 anim-pop">
+        <div className="anim-float inline-block">
+          <PikachuMascot size={110} />
+        </div>
+        <h1 className="text-white text-3xl font-black mt-2 drop-shadow">日本語 N2 道場</h1>
+        <p className="text-red-200 text-sm mt-1">⚡ JLPT N2 模擬試験アプリ</p>
+      </div>
+
+      {/* Login card */}
+      <div className="poke-card bg-white w-full max-w-sm p-7 anim-pop" style={{ animationDelay: '0.1s' }}>
+        <h2 className="text-lg font-black text-gray-800 mb-5 flex items-center gap-2">
+          <Pokeball size={20} />
+          トレーナーログイン
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              メールアドレス
-            </label>
+            <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">メールアドレス</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="example@email.com"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 text-sm"
+              placeholder="trainer@poke.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              パスワード
-            </label>
+            <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">パスワード</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 text-sm"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-red-600 text-xs bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold py-2.5 rounded-lg transition-colors"
+            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-black py-3 rounded-xl transition-colors text-sm tracking-wide shadow-md"
           >
-            {loading ? 'ログイン中...' : 'ログイン'}
+            {loading ? 'ログイン中...' : '⚡ バトル開始！'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          アカウントをお持ちでない方は{' '}
-          <Link href="/signup" className="text-indigo-600 hover:underline font-medium">
-            新規登録
+        <p className="text-center text-xs text-gray-400 mt-5">
+          まだトレーナーじゃない？{' '}
+          <Link href="/signup" className="text-red-600 hover:underline font-bold">
+            新規登録 →
           </Link>
         </p>
       </div>

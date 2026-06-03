@@ -71,7 +71,7 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
 
   function getOptionStyle(label: string) {
     if (!selected && !reviewMode) {
-      return 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer'
+      return 'border-gray-200 hover:border-red-400 hover:bg-red-50 cursor-pointer'
     }
     const correct = result?.correct_answer ?? question.question_data.correct_answer
     if (label === correct) return 'border-green-500 bg-green-50 text-green-800'
@@ -80,38 +80,38 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white rounded-2xl shadow-sm border-2 border-amber-100 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${catColor}`}>
+        <span className={`text-xs font-black px-2.5 py-1 rounded-full ${catColor}`}>
           {q.category}
         </span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleFlag('unknown')}
-            disabled={flagging}
-            title="わからない"
-            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-              currentFlag === 'unknown'
-                ? 'bg-red-500 text-white border-red-500'
-                : 'border-red-300 text-red-500 hover:bg-red-50'
-            }`}
-          >
-            ❓ わからない
-          </button>
-          <button
-            onClick={() => handleFlag('uncertain')}
-            disabled={flagging}
-            title="あいまい"
-            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-              currentFlag === 'uncertain'
-                ? 'bg-yellow-500 text-white border-yellow-500'
-                : 'border-yellow-400 text-yellow-600 hover:bg-yellow-50'
-            }`}
-          >
-            🤔 あいまい
-          </button>
-        </div>
+        {!reviewMode && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleFlag('unknown')}
+              disabled={flagging}
+              className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                currentFlag === 'unknown'
+                  ? 'bg-red-500 text-white border-red-500'
+                  : 'border-red-300 text-red-500 hover:bg-red-50'
+              }`}
+            >
+              ❓ わからない
+            </button>
+            <button
+              onClick={() => handleFlag('uncertain')}
+              disabled={flagging}
+              className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                currentFlag === 'uncertain'
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'border-amber-400 text-amber-600 hover:bg-amber-50'
+              }`}
+            >
+              🤔 あいまい
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Question */}
@@ -126,9 +126,9 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
               key={label}
               onClick={() => handleAnswer(label)}
               disabled={!!selected || reviewMode}
-              className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm ${getOptionStyle(label)}`}
+              className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium ${getOptionStyle(label)}`}
             >
-              <span className="font-semibold mr-2">{label}.</span>
+              <span className="font-black mr-2">{label}.</span>
               {opt.replace(/^[A-D]\.\s*/, '')}
             </button>
           )
@@ -137,20 +137,20 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
 
       {/* Result feedback */}
       {(result || reviewMode) && (
-        <div className={`mt-4 p-4 rounded-xl ${
+        <div className={`mt-4 p-4 rounded-xl border-2 ${
           reviewMode
-            ? 'bg-blue-50 border border-blue-100'
+            ? 'bg-blue-50 border-blue-200'
             : result?.is_correct
-            ? 'bg-green-50 border border-green-200'
-            : 'bg-red-50 border border-red-200'
+            ? 'bg-green-50 border-green-300'
+            : 'bg-red-50 border-red-300'
         }`}>
           {!reviewMode && (
-            <p className={`font-bold text-base mb-2 ${result?.is_correct ? 'text-green-700' : 'text-red-700'}`}>
-              {result?.is_correct ? '✅ 正解！' : '❌ 不正解'}
+            <p className={`font-black text-base mb-2 ${result?.is_correct ? 'text-green-700' : 'text-red-700'}`}>
+              {result?.is_correct ? '✅ 正解！やった！' : '❌ 不正解...'}
             </p>
           )}
           <p className="text-gray-700 text-sm leading-relaxed">
-            <span className="font-semibold">解説：</span>{q.explanation}
+            <span className="font-black">解説：</span>{q.explanation}
           </p>
         </div>
       )}

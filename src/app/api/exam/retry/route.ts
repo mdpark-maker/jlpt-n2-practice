@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const { data: session, error: sessionError } = await supabase
     .from('exam_sessions')
-    .insert({ user_id: user.id, total_questions: questions.length })
+    .insert({ user_id: user.id, total_questions: questions.length, is_retry: true })
     .select()
     .single()
 
