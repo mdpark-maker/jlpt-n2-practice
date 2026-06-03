@@ -12,6 +12,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -22,20 +23,50 @@ export default function SignupPage() {
     }
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { display_name: displayName } },
     })
+
     if (error) {
-      setError(error.message === 'User already registered'
-        ? 'このメールアドレスはすでに登録されています'
-        : '登録に失敗しました。もう一度お試しください')
-    } else {
+      const msg = error.message
+      if (msg.includes('already registered') || msg.includes('already been registered')) {
+        setError('このメールアドレスはすでに登録されています')
+      } else if (msg.includes('invalid') || msg.includes('Invalid')) {
+        setError('メールアドレスの形式が正しくありません')
+      } else {
+        setError(`登録に失敗しました: ${msg}`)
+      }
+    } else if (data.session) {
+      // Email confirmation disabled — logged in immediately
       router.push('/dashboard')
       router.refresh()
+    } else {
+      // Email confirmation required
+      setNeedsConfirmation(true)
     }
     setLoading(false)
+  }
+
+  if (needsConfirmation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100 px-4">
+        <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8 text-center">
+          <div className="text-5xl mb-4">📧</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-3">確認メールを送信しました</h2>
+          <p className="text-gray-600 text-sm mb-2">
+            <span className="font-semibold">{email}</span> に確認メールを送りました。
+          </p>
+          <p className="text-gray-500 text-sm mb-6">
+            メール内のリンクをクリックしてアカウントを有効化してください。
+          </p>
+          <Link href="/login" className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors">
+            ログインページへ
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -50,9 +81,7 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              表示名
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
             <input
               type="text"
               value={displayName}
@@ -63,9 +92,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              メールアドレス
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
             <input
               type="email"
               value={email}
@@ -76,9 +103,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              パスワード（6文字以上）
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">パスワード（6文字以上）</label>
             <input
               type="password"
               value={password}
