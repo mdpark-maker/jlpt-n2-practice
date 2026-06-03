@@ -17,25 +17,26 @@ export async function generateJLPTQuestions(
 ): Promise<QuestionData[]> {
   const categoryDesc = CATEGORY_PROMPTS[category]
 
-  const prompt = `あなたはJLPT（日本語能力試験）N2レベルの試験問題作成の専門家です。
-${categoryDesc}JLPT N2レベルの問題を${count}問作成してください。
+  const prompt = `You are an expert JLPT N2 exam question creator. Create ${count} questions about ${categoryDesc} at JLPT N2 level.
 
-以下のJSON形式で返してください。JSONのみ返し、他のテキストは含めないでください：
+CRITICAL LANGUAGE REQUIREMENT: ALL question text, answer options, and explanations MUST be written entirely in Japanese (日本語). Do NOT use Korean, English, or any other language in the question, options, or explanation fields.
+
+Return ONLY a JSON array in this exact format, with no other text:
 [
   {
-    "category": "語彙|文法|漢字|読解のいずれか",
-    "question": "問題文（日本語）",
-    "options": ["A. 選択肢1", "B. 選択肢2", "C. 選択肢3", "D. 選択肢4"],
-    "correct_answer": "A|B|C|Dのいずれか",
-    "explanation": "正解の理由の説明（日本語）"
+    "category": "語彙 or 文法 or 漢字 or 読解",
+    "question": "日本語の問題文（Japanese only）",
+    "options": ["A. 日本語の選択肢", "B. 日本語の選択肢", "C. 日本語の選択肢", "D. 日本語の選択肢"],
+    "correct_answer": "A or B or C or D",
+    "explanation": "日本語の解説（Japanese only）"
   }
 ]
 
-注意事項：
-- 問題はN2レベルの難易度にしてください
-- 選択肢は必ずA・B・C・Dの4つにしてください
-- 読解問題の場合は短い文章を含めてください
-- 説明は学習者が理解できるよう丁寧に書いてください`
+Requirements:
+- N2 difficulty level
+- Exactly 4 options labeled A, B, C, D
+- For 読解 questions, include a short Japanese passage
+- All text in Japanese only — never Korean, never English`
 
   const res = await fetch(OPENROUTER_API_URL, {
     method: 'POST',
