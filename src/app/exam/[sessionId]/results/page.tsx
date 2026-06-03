@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ExamQuestion } from '@/lib/types'
+import { ExamQuestion, ExamLevel } from '@/lib/types'
 import RetrySection from './RetrySection'
 import { Pokeball, HpBar } from '@/components/PokeUI'
+import { KittyBow, KittyScoreBar } from '@/components/KittyUI'
 
 export default async function ResultsPage({
   params,
@@ -30,10 +31,20 @@ export default async function ResultsPage({
     .eq('session_id', sessionId)
     .order('position')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('points')
+    .eq('id', user.id)
+    .single()
+
   const qs: ExamQuestion[] = questions ?? []
   const score = session.score ?? qs.filter(q => q.is_correct).length
   const total = session.total_questions
   const pct = Math.round((score / total) * 100)
+  const isPerfect = score === total
+  const level: ExamLevel = session.level ?? 'n2'
+  const isKitty = level === 'n3'
+  const currentPoints = profile?.points ?? 0
 
   const isWin = pct >= 70
   const isMid = pct >= 50
@@ -45,40 +56,65 @@ export default async function ResultsPage({
     読解: 'bg-green-100 text-green-700',
   }
 
+  const headerBg = isKitty ? 'bg-pink-500' : 'bg-red-600'
+  const pageBg = isKitty ? 'bg-pink-50' : 'bg-red-50'
+  const cardBorder = isKitty ? 'border-pink-200' : 'border-amber-100'
+  const primaryColor = isKitty ? 'text-pink-600' : 'text-red-600'
+  const newExamBtn = isKitty
+    ? 'bg-pink-500 hover:bg-pink-600 text-white'
+    : 'bg-red-600 hover:bg-red-700 text-white'
+
   return (
-    <div className="min-h-screen bg-red-50">
-      <header className="bg-red-600 text-white shadow">
+    <div className={`min-h-screen ${pageBg}`}>
+      <header className={`${headerBg} text-white shadow`}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
-          <Pokeball size={20} />
-          <h1 className="text-sm font-black">バトル結果</h1>
+          {isKitty ? <KittyBow size={20} /> : <Pokeball size={20} />}
+          <h1 className="text-sm font-black">{level.toUpperCase()} 시험 결과</h1>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        {/* Score card */}
-        <div className="poke-card bg-white p-7 text-center anim-pop">
-          <div className="text-5xl mb-2">
-            {isWin ? '🏆' : isMid ? '💪' : '🔥'}
+        {/* Perfect score banner */}
+        {isPerfect && (
+          <div className="bg-yellow-400 rounded-2xl p-5 text-center shadow-lg anim-pop">
+            <p className="text-3xl mb-1">🌟</p>
+            <p className="text-xl font-black text-yellow-900">만점 달성!</p>
+            <p className="text-yellow-800 font-bold text-sm mt-1">
+              1,000원 적립! (현재 누적: {currentPoints.toLocaleString()}원)
+            </p>
           </div>
-          <p className={`text-5xl font-black mb-1 ${isWin ? 'text-green-600' : isMid ? 'text-amber-600' : 'text-red-600'}`}>
+        )}
+
+        {/* Score card */}
+        <div className={`bg-white rounded-2xl border-2 ${cardBorder} p-7 text-center anim-pop shadow-sm`}>
+          <div className="text-5xl mb-2">
+            {isPerfect ? '🏆' : isWin ? '😄' : isMid ? '💪' : '🔥'}
+          </div>
+          <p className={`text-5xl font-black mb-1 ${isWin || isPerfect ? 'text-green-600' : isMid ? 'text-amber-600' : 'text-red-600'}`}>
             {pct}%
           </p>
-          <p className="text-gray-400 text-sm mb-3">{score} / {total} 問正解</p>
+          <p className="text-gray-400 text-sm mb-3">{score} / {total} 문제 정답</p>
           <div className="max-w-xs mx-auto mb-3">
-            <HpBar pct={pct} />
+            {isKitty ? <KittyScoreBar pct={pct} /> : <HpBar pct={pct} />}
           </div>
-          <p className={`font-black text-base ${isWin ? 'text-green-700' : isMid ? 'text-amber-700' : 'text-red-700'}`}>
-            {isWin ? '🎉 すばらしい！合格圏内！' : isMid ? 'もう少し！再挑戦しよう 💪' : '要復習！諦めないで！🔥'}
+          <p className={`font-black text-base ${isWin || isPerfect ? 'text-green-700' : isMid ? 'text-amber-700' : 'text-red-700'}`}>
+            {isPerfect
+              ? '🎉 완벽해요! 최고예요!'
+              : isWin
+              ? '훌륭해요! 합격권!'
+              : isMid
+              ? '조금만 더! 다시 도전해봐요 💪'
+              : '복습이 필요해요! 포기하지 마세요 🔥'}
           </p>
         </div>
 
-        {/* Retry section (wrong + flagged) */}
+        {/* Retry section */}
         <RetrySection questions={qs} />
 
         {/* Question summary */}
-        <div className="bg-white rounded-2xl border-2 border-amber-100 overflow-hidden shadow-sm">
-          <div className="px-5 py-3 border-b border-amber-100 bg-amber-50">
-            <h2 className="font-black text-gray-800">問題一覧</h2>
+        <div className={`bg-white rounded-2xl border-2 ${cardBorder} overflow-hidden shadow-sm`}>
+          <div className={`px-5 py-3 border-b ${isKitty ? 'border-pink-100 bg-pink-50' : 'border-amber-100 bg-amber-50'}`}>
+            <h2 className="font-black text-gray-800">문제 목록</h2>
           </div>
           <ul className="divide-y divide-gray-100">
             {qs.map((q, i) => {
@@ -109,20 +145,20 @@ export default async function ResultsPage({
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Link
-            href="/review"
-            className="bg-white hover:bg-amber-50 border-2 border-amber-200 text-gray-800 rounded-xl p-4 text-center font-black transition-colors text-sm"
+            href={`/review?level=${level}`}
+            className={`bg-white hover:bg-gray-50 border-2 ${cardBorder} text-gray-800 rounded-xl p-4 text-center font-black transition-colors text-sm`}
           >
-            📒 復習ノート
+            {isKitty ? '🎀' : '📒'} 복습 노트
           </Link>
           <Link
-            href="/exam"
-            className="bg-red-600 hover:bg-red-700 text-white rounded-xl p-4 text-center font-black transition-colors text-sm"
+            href={`/exam?level=${level}`}
+            className={`${newExamBtn} rounded-xl p-4 text-center font-black transition-colors text-sm`}
           >
-            ⚡ 新バトル！
+            ⚡ 새 시험!
           </Link>
         </div>
-        <Link href="/dashboard" className="block text-center text-sm text-red-600 hover:underline font-bold">
-          ダッシュボードへ →
+        <Link href={`/dashboard?level=${level}`} className={`block text-center text-sm ${primaryColor} hover:underline font-bold`}>
+          대시보드로 →
         </Link>
       </main>
     </div>

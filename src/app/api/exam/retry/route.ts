@@ -7,12 +7,12 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { questions }: { questions: QuestionData[] } = await request.json()
+  const { questions, level = 'n2' }: { questions: QuestionData[]; level?: string } = await request.json()
   if (!questions?.length) return NextResponse.json({ error: 'No questions provided' }, { status: 400 })
 
   const { data: session, error: sessionError } = await supabase
     .from('exam_sessions')
-    .insert({ user_id: user.id, total_questions: questions.length, is_retry: true })
+    .insert({ user_id: user.id, total_questions: questions.length, is_retry: true, level })
     .select()
     .single()
 

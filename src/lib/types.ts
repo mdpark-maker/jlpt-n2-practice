@@ -1,11 +1,13 @@
 export type FlagStatus = 'unknown' | 'uncertain'
+export type ExamLevel = 'n2' | 'n3'
 
 export type QuestionData = {
   category: string
   question: string
   options: string[]
   correct_answer: string // 'A' | 'B' | 'C' | 'D'
-  explanation: string
+  explanation: string      // Japanese
+  explanation_ko?: string  // Korean
 }
 
 export type ExamQuestion = {
@@ -27,8 +29,10 @@ export type ExamSession = {
   status: 'in_progress' | 'completed'
   score: number | null
   total_questions: number
+  level: ExamLevel
   created_at: string
   completed_at: string | null
+  is_retry?: boolean
 }
 
 export type ExamCategory = 'all' | '語彙' | '文法' | '読解' | '漢字'
@@ -38,5 +42,6 @@ export type ReviewItem = {
   user_id: string
   question_data: QuestionData
   original_flag_status: FlagStatus | null
+  level: ExamLevel
   created_at: string
 }

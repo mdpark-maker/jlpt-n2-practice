@@ -16,7 +16,16 @@ export async function POST(
     .eq('session_id', sessionId)
     .eq('user_id', user.id)
 
+  const { data: session } = await supabase
+    .from('exam_sessions')
+    .select('total_questions, level')
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .single()
+
   const score = questions?.filter(q => q.is_correct).length ?? 0
+  const total = session?.total_questions ?? questions?.length ?? 0
+  const isPerfect = score === total && total > 0
 
   await supabase
     .from('exam_sessions')
@@ -31,11 +40,30 @@ export async function POST(
       user_id: user.id,
       question_data: q.question_data,
       original_flag_status: q.flag_status ?? null,
+      level: session?.level ?? 'n2',
     }))
 
   if (toSave.length > 0) {
     await supabase.from('review_items').insert(toSave)
   }
 
-  return NextResponse.json({ score })
+  // Award 1000 points for perfect score
+  let newPoints: number | null = null
+  if (isPerfect) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('points')
+      .eq('id', user.id)
+      .single()
+
+    const current = profile?.points ?? 0
+    newPoints = current + 1000
+
+    await supabase
+      .from('profiles')
+      .update({ points: newPoints })
+      .eq('id', user.id)
+  }
+
+  return NextResponse.json({ score, isPerfect, newPoints })
 }

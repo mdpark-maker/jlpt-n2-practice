@@ -1,27 +1,40 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ExamCategory } from '@/lib/types'
+import { ExamCategory, ExamLevel } from '@/lib/types'
 import { Pokeball } from '@/components/PokeUI'
+import { KittyBow } from '@/components/KittyUI'
 
 const CATEGORIES: { value: ExamCategory; label: string; desc: string; emoji: string }[] = [
-  { value: 'all',  label: '総合',  desc: '語彙・文法・漢字・読解', emoji: '⚡' },
-  { value: '語彙', label: '語彙',  desc: '単語の意味・用法',        emoji: '📖' },
-  { value: '文法', label: '文法',  desc: '助詞・接続・敬語',        emoji: '✏️' },
-  { value: '漢字', label: '漢字',  desc: '読み方・書き方',          emoji: '🈳' },
-  { value: '読解', label: '読解',  desc: '文章の内容理解',          emoji: '📜' },
+  { value: 'all',  label: '종합',  desc: '어휘·문법·한자·독해',  emoji: '⚡' },
+  { value: '語彙', label: '어휘',  desc: '단어 의미·용법',        emoji: '📖' },
+  { value: '文法', label: '문법',  desc: '조사·접속·경어',        emoji: '✏️' },
+  { value: '漢字', label: '한자',  desc: '읽기·쓰기',             emoji: '🈳' },
+  { value: '読解', label: '독해',  desc: '문장 내용 이해',        emoji: '📜' },
 ]
 
 const COUNTS = [5, 10, 20]
 
-export default function ExamSetupPage() {
+function ExamSetupInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const level: ExamLevel = searchParams.get('level') === 'n3' ? 'n3' : 'n2'
+  const isKitty = level === 'n3'
+
   const [count, setCount] = useState(10)
   const [category, setCategory] = useState<ExamCategory>('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const accent = isKitty ? 'border-pink-500 bg-pink-50' : 'border-red-500 bg-red-50'
+  const accentHover = isKitty ? 'hover:border-pink-300' : 'hover:border-red-300'
+  const btnColor = isKitty
+    ? 'bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300'
+    : 'bg-red-600 hover:bg-red-700 disabled:bg-red-300'
+  const headerBg = isKitty ? 'bg-pink-500' : 'bg-red-600'
+  const backColor = isKitty ? 'text-pink-200 hover:text-white' : 'text-red-200 hover:text-white'
 
   async function startExam() {
     setLoading(true)
@@ -30,34 +43,36 @@ export default function ExamSetupPage() {
       const res = await fetch('/api/exam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, category }),
+        body: JSON.stringify({ count, category, level }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '不明なエラー')
+      if (!res.ok) throw new Error(data.error || '알 수 없는 오류')
       router.push(`/exam/${data.sessionId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '問題の生成に失敗しました。')
+      setError(err instanceof Error ? err.message : '문제 생성에 실패했습니다.')
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-red-50">
-      <header className="bg-red-600 text-white shadow">
+    <div className={`min-h-screen ${isKitty ? 'bg-pink-50' : 'bg-red-50'}`}>
+      <header className={`${headerBg} text-white shadow`}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link href="/dashboard" className="text-red-200 hover:text-white text-sm">← 戻る</Link>
+          <Link href={`/dashboard?level=${level}`} className={`${backColor} text-sm`}>← 뒤로</Link>
           <div className="flex items-center gap-2 flex-1">
-            <Pokeball size={20} />
-            <h1 className="text-sm font-black">バトル設定</h1>
+            {isKitty ? <KittyBow size={20} /> : <Pokeball size={20} />}
+            <h1 className="text-sm font-black">
+              {isKitty ? 'N3 · 헬로키티 시험 설정' : 'N2 · 포켓몬 시험 설정'}
+            </h1>
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {/* Category */}
-        <div className="bg-white poke-card p-6">
+        <div className="bg-white rounded-2xl border-2 border-gray-100 p-6 shadow-sm">
           <h2 className="font-black text-gray-800 mb-4 flex items-center gap-2">
-            <span>🎯</span> バトルジャンル
+            <span>🎯</span> 시험 분야
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {CATEGORIES.map(c => (
@@ -65,9 +80,7 @@ export default function ExamSetupPage() {
                 key={c.value}
                 onClick={() => setCategory(c.value)}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  category === c.value
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-gray-200 hover:border-red-300'
+                  category === c.value ? accent : `border-gray-200 ${accentHover}`
                 }`}
               >
                 <p className="text-lg mb-0.5">{c.emoji}</p>
@@ -79,9 +92,9 @@ export default function ExamSetupPage() {
         </div>
 
         {/* Count */}
-        <div className="bg-white poke-card p-6">
+        <div className="bg-white rounded-2xl border-2 border-gray-100 p-6 shadow-sm">
           <h2 className="font-black text-gray-800 mb-4 flex items-center gap-2">
-            <span>⚔️</span> 問題数
+            <span>⚔️</span> 문제 수
           </h2>
           <div className="flex gap-3">
             {COUNTS.map(n => (
@@ -90,11 +103,11 @@ export default function ExamSetupPage() {
                 onClick={() => setCount(n)}
                 className={`flex-1 py-3 rounded-xl border-2 font-black transition-all text-sm ${
                   count === n
-                    ? 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-gray-200 text-gray-500 hover:border-red-300'
+                    ? (isKitty ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-red-500 bg-red-50 text-red-700')
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
                 }`}
               >
-                {n}問
+                {n}문제
               </button>
             ))}
           </div>
@@ -107,7 +120,7 @@ export default function ExamSetupPage() {
         <button
           onClick={startExam}
           disabled={loading}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-black py-4 rounded-2xl text-lg transition-colors shadow-lg"
+          className={`w-full ${btnColor} text-white font-black py-4 rounded-2xl text-lg transition-colors shadow-lg`}
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
@@ -115,11 +128,19 @@ export default function ExamSetupPage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
               </svg>
-              AIが問題を生成中...
+              AI가 문제를 생성 중...
             </span>
-          ) : '⚡ バトル開始！'}
+          ) : isKitty ? '🎀 시험 시작!' : '⚡ 시험 시작!'}
         </button>
       </main>
     </div>
+  )
+}
+
+export default function ExamSetupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">불러오는 중...</div>}>
+      <ExamSetupInner />
+    </Suspense>
   )
 }

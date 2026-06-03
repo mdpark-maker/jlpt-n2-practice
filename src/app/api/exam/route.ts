@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateJLPTQuestions } from '@/lib/openrouter'
-import { ExamCategory } from '@/lib/types'
+import { ExamCategory, ExamLevel } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { count = 10, category = 'all' } = await request.json()
+  const { count = 10, category = 'all', level = 'n2' } = await request.json()
 
   try {
-    const questions = await generateJLPTQuestions(count as number, category as ExamCategory)
+    const questions = await generateJLPTQuestions(count as number, category as ExamCategory, level as ExamLevel)
 
     const { data: session, error: sessionError } = await supabase
       .from('exam_sessions')
-      .insert({ user_id: user.id, total_questions: questions.length })
+      .insert({ user_id: user.id, total_questions: questions.length, level })
       .select()
       .single()
 

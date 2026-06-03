@@ -1,19 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ReviewItem } from '@/lib/types'
+import { ReviewItem, ExamLevel } from '@/lib/types'
 import { Pokeball } from '@/components/PokeUI'
+import { KittyBow } from '@/components/KittyUI'
 
 type Filter = 'all' | 'unknown' | 'uncertain' | 'wrong'
 
 const FILTER_OPTIONS: { value: Filter; label: string }[] = [
-  { value: 'all',       label: 'すべて' },
-  { value: 'unknown',   label: '❓ わからない' },
-  { value: 'uncertain', label: '🤔 あいまい' },
-  { value: 'wrong',     label: '❌ 不正解' },
+  { value: 'all',       label: '전체' },
+  { value: 'unknown',   label: '❓ 모르겠어요' },
+  { value: 'uncertain', label: '🤔 애매해요' },
+  { value: 'wrong',     label: '❌ 오답' },
 ]
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -25,15 +26,25 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D']
 
-export default function ReviewPage() {
+function ReviewInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const level: ExamLevel = searchParams.get('level') === 'n3' ? 'n3' : 'n2'
+  const isKitty = level === 'n3'
+
   const [items, setItems] = useState<ReviewItem[]>([])
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(true)
   const [retryLoading, setRetryLoading] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  // Per-item answer state: null = not answered, string = chosen option
   const [answers, setAnswers] = useState<Record<string, string>>({})
+
+  const headerBg = isKitty ? 'bg-pink-500' : 'bg-red-600'
+  const pageBg = isKitty ? 'bg-pink-50' : 'bg-red-50'
+  const filterActive = isKitty ? 'border-pink-500 bg-pink-500 text-white' : 'border-red-500 bg-red-500 text-white'
+  const filterIdle = isKitty ? 'border-gray-200 text-gray-600 hover:border-pink-300 bg-white' : 'border-gray-200 text-gray-600 hover:border-red-300 bg-white'
+  const retryBtn = isKitty ? 'bg-white text-pink-700 hover:bg-pink-50' : 'bg-white text-red-700 hover:bg-red-50'
+  const cardBorder = isKitty ? 'border-pink-100' : 'border-amber-100'
 
   useEffect(() => {
     async function load() {
@@ -45,6 +56,7 @@ export default function ReviewPage() {
         .from('review_items')
         .select('*')
         .eq('user_id', user.id)
+        .eq('level', level)
         .order('created_at', { ascending: false })
 
       const seen = new Set<string>()
@@ -59,7 +71,7 @@ export default function ReviewPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [level])
 
   const filtered = items.filter(item => {
     if (filter === 'unknown')   return item.original_flag_status === 'unknown'
@@ -73,7 +85,7 @@ export default function ReviewPage() {
     const res = await fetch('/api/exam/retry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questions: subset.map(i => i.question_data) }),
+      body: JSON.stringify({ questions: subset.map(i => i.question_data), level }),
     })
     if (res.ok) {
       const { sessionId } = await res.json()
@@ -91,7 +103,7 @@ export default function ReviewPage() {
   }
 
   function handleAnswer(itemId: string, chosen: string) {
-    if (answers[itemId]) return // already answered
+    if (answers[itemId]) return
     setAnswers(prev => ({ ...prev, [itemId]: chosen }))
   }
 
@@ -104,23 +116,23 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-red-50">
-      <header className="bg-red-600 text-white shadow sticky top-0 z-10">
+    <div className={`min-h-screen ${pageBg}`}>
+      <header className={`${headerBg} text-white shadow sticky top-0 z-10`}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-red-200 hover:text-white text-sm">← 戻る</Link>
+            <Link href={`/dashboard?level=${level}`} className={`${isKitty ? 'text-pink-200 hover:text-white' : 'text-red-200 hover:text-white'} text-sm`}>← 뒤로</Link>
             <div className="flex items-center gap-2">
-              <Pokeball size={18} />
-              <h1 className="text-sm font-black">復習ノート</h1>
+              {isKitty ? <KittyBow size={18} /> : <Pokeball size={18} />}
+              <h1 className="text-sm font-black">{level.toUpperCase()} 복습 노트</h1>
             </div>
           </div>
           {filtered.length > 0 && (
             <button
               onClick={() => startRetry(filtered, 'all')}
               disabled={retryLoading !== null}
-              className="bg-white text-red-700 hover:bg-red-50 disabled:opacity-50 text-xs font-black px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              className={`${retryBtn} disabled:opacity-50 text-xs font-black px-3 py-1.5 rounded-lg transition-colors shrink-0`}
             >
-              {retryLoading === 'all' ? '準備中...' : `⚡ ${filtered.length}問 まとめて再挑戦`}
+              {retryLoading === 'all' ? '준비 중...' : `⚡ ${filtered.length}문제 재도전`}
             </button>
           )}
         </div>
@@ -134,9 +146,7 @@ export default function ReviewPage() {
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={`px-4 py-1.5 rounded-full text-xs font-black border-2 transition-all ${
-                filter === f.value
-                  ? 'border-red-500 bg-red-500 text-white'
-                  : 'border-gray-200 text-gray-600 hover:border-red-300 bg-white'
+                filter === f.value ? filterActive : filterIdle
               }`}
             >
               {f.label}
@@ -146,20 +156,22 @@ export default function ReviewPage() {
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="anim-float inline-block mb-3"><Pokeball size={40} /></div>
-            <p className="text-gray-400 font-bold">読み込み中...</p>
+            <div className="anim-float inline-block mb-3">
+              {isKitty ? <KittyBow size={40} /> : <Pokeball size={40} />}
+            </div>
+            <p className="text-gray-400 font-bold">불러오는 중...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-3">📭</div>
-            <p className="text-gray-400 font-bold">復習する問題がありません</p>
-            <Link href="/exam" className="mt-4 inline-block text-red-600 hover:underline text-sm font-bold">
-              バトルに挑戦してみよう →
+            <p className="text-gray-400 font-bold">복습할 문제가 없습니다</p>
+            <Link href={`/exam?level=${level}`} className={`mt-4 inline-block ${isKitty ? 'text-pink-600' : 'text-red-600'} hover:underline text-sm font-bold`}>
+              시험에 도전해보세요 →
             </Link>
           </div>
         ) : (
           <>
-            <p className="text-xs text-gray-400 font-bold">{filtered.length}問 保存済み</p>
+            <p className="text-xs text-gray-400 font-bold">{filtered.length}문제 저장됨</p>
             <div className="space-y-3">
               {filtered.map(item => {
                 const isOpen = expanded.has(item.id)
@@ -171,10 +183,10 @@ export default function ReviewPage() {
                 const isReading = item.question_data.category === '読解'
 
                 return (
-                  <div key={item.id} className="bg-white rounded-2xl border-2 border-amber-100 overflow-hidden shadow-sm">
+                  <div key={item.id} className={`bg-white rounded-2xl border-2 ${cardBorder} overflow-hidden shadow-sm`}>
                     {/* Collapsed header */}
                     <div
-                      className="px-5 py-4 flex items-start gap-3 cursor-pointer hover:bg-amber-50 transition-colors"
+                      className={`px-5 py-4 flex items-start gap-3 cursor-pointer hover:bg-${isKitty ? 'pink' : 'amber'}-50 transition-colors`}
                       onClick={() => toggleExpand(item.id)}
                     >
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
@@ -202,22 +214,21 @@ export default function ReviewPage() {
 
                     {/* Expanded content */}
                     {isOpen && (
-                      <div className="px-5 pb-5 border-t-2 border-amber-100 pt-4 space-y-3">
-                        {/* Reading comprehension: show full passage */}
+                      <div className={`px-5 pb-5 border-t-2 ${cardBorder} pt-4 space-y-3`}>
                         {isReading && (
                           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                             {item.question_data.question}
                           </div>
                         )}
 
-                        {/* Options — interactive until answered */}
+                        {/* Options */}
                         <div className="space-y-2">
                           {item.question_data.options.map((opt, idx) => {
                             const label = OPTION_LABELS[idx]
                             const isThisCorrect = label === correct
                             const isThisChosen = label === chosen
 
-                            let style = 'border-gray-200 text-gray-700 hover:border-red-400 hover:bg-red-50 cursor-pointer'
+                            let style = `border-gray-200 text-gray-700 ${isKitty ? 'hover:border-pink-400 hover:bg-pink-50' : 'hover:border-red-400 hover:bg-red-50'} cursor-pointer`
                             if (isAnswered) {
                               if (isThisCorrect) {
                                 style = 'border-green-500 bg-green-50 text-green-800'
@@ -244,7 +255,7 @@ export default function ReviewPage() {
                           })}
                         </div>
 
-                        {/* Feedback after answering */}
+                        {/* Bilingual feedback after answering */}
                         {isAnswered && (
                           <>
                             <div className={`rounded-xl px-4 py-3 text-sm border-2 font-medium ${
@@ -252,16 +263,25 @@ export default function ReviewPage() {
                                 ? 'bg-green-50 border-green-300 text-green-800'
                                 : 'bg-red-50 border-red-300 text-red-800'
                             }`}>
-                              {isCorrect ? '✅ 正解！やった！' : `❌ 不正解... 正解は ${correct} です`}
+                              {isCorrect ? '✅ 정답!' : `❌ 오답... 정답은 ${correct} 입니다`}
                             </div>
+                            {/* Korean explanation */}
+                            {item.question_data.explanation_ko && (
+                              <div className="bg-pink-50 border border-pink-200 rounded-xl px-4 py-3 text-sm text-pink-900">
+                                <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
+                                {item.question_data.explanation_ko}
+                              </div>
+                            )}
+                            {/* Japanese explanation */}
                             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-                              <span className="font-black">解説：</span>{item.question_data.explanation}
+                              <p className="text-xs font-black text-blue-600 mb-1">🇯🇵 日本語解説</p>
+                              {item.question_data.explanation}
                             </div>
                             <button
                               onClick={() => resetAnswer(item.id)}
                               className="text-xs text-gray-400 hover:text-gray-600 underline"
                             >
-                              もう一度この問題を解く
+                              다시 이 문제 풀기
                             </button>
                           </>
                         )}
@@ -275,5 +295,13 @@ export default function ReviewPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">불러오는 중...</div>}>
+      <ReviewInner />
+    </Suspense>
   )
 }

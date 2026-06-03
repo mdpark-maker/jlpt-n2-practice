@@ -5,13 +5,15 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import QuestionCard from '@/components/QuestionCard'
 import ExamProgress from '@/components/ExamProgress'
-import { ExamQuestion, FlagStatus } from '@/lib/types'
+import { ExamQuestion, FlagStatus, ExamLevel } from '@/lib/types'
 import { Pokeball } from '@/components/PokeUI'
+import { KittyBow } from '@/components/KittyUI'
 
 type AnswerResult = {
   is_correct: boolean
   correct_answer: string
   explanation: string
+  explanation_ko?: string
 }
 
 export default function ExamPage() {
@@ -21,12 +23,14 @@ export default function ExamPage() {
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
+  const [level, setLevel] = useState<ExamLevel>('n2')
 
   useEffect(() => {
     fetch(`/api/exam/${sessionId}`)
       .then(r => r.json())
       .then(data => {
         setQuestions(data.questions)
+        setLevel(data.session?.level ?? 'n2')
         const firstUnanswered = data.questions.findIndex((q: ExamQuestion) => q.user_answer === null)
         setCurrent(firstUnanswered >= 0 ? firstUnanswered : 0)
         setLoading(false)
@@ -53,12 +57,21 @@ export default function ExamPage() {
     router.push(`/exam/${sessionId}/results`)
   }
 
+  const isKitty = level === 'n3'
+  const headerBg = isKitty ? 'bg-pink-500' : 'bg-red-600'
+  const pageBg = isKitty ? 'bg-pink-50' : 'bg-red-50'
+  const backColor = isKitty ? 'text-pink-200 hover:text-white' : 'text-red-200 hover:text-white'
+  const navBtnActive = isKitty ? 'bg-pink-500 hover:bg-pink-600' : 'bg-red-600 hover:bg-red-700'
+  const completeBtn = isKitty ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50">
+      <div className={`min-h-screen flex items-center justify-center ${pageBg}`}>
         <div className="text-center">
-          <div className="anim-float inline-block mb-3"><Pokeball size={48} /></div>
-          <p className="text-gray-500 font-bold">読み込み中...</p>
+          <div className="anim-float inline-block mb-3">
+            {isKitty ? <KittyBow size={48} /> : <Pokeball size={48} />}
+          </div>
+          <p className="text-gray-500 font-bold">불러오는 중...</p>
         </div>
       </div>
     )
@@ -69,15 +82,17 @@ export default function ExamPage() {
   const allAnswered = answered === questions.length
 
   return (
-    <div className="min-h-screen bg-red-50">
-      <header className="bg-red-600 text-white shadow sticky top-0 z-10">
+    <div className={`min-h-screen ${pageBg}`}>
+      <header className={`${headerBg} text-white shadow sticky top-0 z-10`}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/dashboard" className="text-red-200 hover:text-white text-sm">← やめる</Link>
+          <Link href={`/dashboard?level=${level}`} className={`${backColor} text-sm`}>← 그만하기</Link>
           <div className="flex items-center gap-2">
-            <Pokeball size={18} />
-            <h1 className="text-sm font-black">N2 バトル！</h1>
+            {isKitty ? <KittyBow size={18} /> : <Pokeball size={18} />}
+            <h1 className="text-sm font-black">{level.toUpperCase()} 시험!</h1>
           </div>
-          <span className="text-red-200 text-xs font-bold">{answered}/{questions.length}問</span>
+          <span className={`${isKitty ? 'text-pink-200' : 'text-red-200'} text-xs font-bold`}>
+            {answered}/{questions.length}문제
+          </span>
         </div>
       </header>
 
@@ -92,7 +107,9 @@ export default function ExamPage() {
               onClick={() => setCurrent(i)}
               className={`w-8 h-8 rounded-lg text-xs font-black border-2 transition-all ${
                 i === current
-                  ? 'border-red-500 bg-red-500 text-white'
+                  ? isKitty
+                    ? 'border-pink-500 bg-pink-500 text-white'
+                    : 'border-red-500 bg-red-500 text-white'
                   : q.flag_status === 'unknown'
                   ? 'border-red-400 bg-red-50 text-red-600'
                   : q.flag_status === 'uncertain'
@@ -116,6 +133,7 @@ export default function ExamPage() {
             sessionId={sessionId}
             onAnswered={handleAnswered}
             onFlagged={handleFlagged}
+            theme={isKitty ? 'kitty' : 'pokemon'}
           />
         )}
 
@@ -126,24 +144,24 @@ export default function ExamPage() {
             disabled={current === 0}
             className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 disabled:opacity-40"
           >
-            ← 前へ
+            ← 이전
           </button>
 
           {current < questions.length - 1 ? (
             <button
               onClick={() => setCurrent(c => c + 1)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-black text-white"
+              className={`px-4 py-2 ${navBtnActive} rounded-xl text-sm font-black text-white`}
             >
-              次へ →
+              다음 →
             </button>
           ) : (
             <button
               onClick={handleComplete}
               disabled={completing || !allAnswered}
-              title={!allAnswered ? `未回答 ${questions.length - answered}問あります` : ''}
-              className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl text-sm font-black text-white transition-colors"
+              title={!allAnswered ? `미답변 ${questions.length - answered}문제 있음` : ''}
+              className={`px-5 py-2 ${completeBtn} disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl text-sm font-black text-white transition-colors`}
             >
-              {completing ? '採点中...' : allAnswered ? '⚡ 結果を見る！' : `未回答 ${questions.length - answered}問`}
+              {completing ? '채점 중...' : allAnswered ? '⚡ 결과 보기!' : `미답변 ${questions.length - answered}문제`}
             </button>
           )}
         </div>

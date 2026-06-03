@@ -7,6 +7,7 @@ type AnswerResult = {
   is_correct: boolean
   correct_answer: string
   explanation: string
+  explanation_ko?: string
 }
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   onAnswered: (questionId: string, result: AnswerResult) => void
   onFlagged: (questionId: string, status: FlagStatus | null) => void
   reviewMode?: boolean
+  theme?: 'pokemon' | 'kitty'
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D']
@@ -26,7 +28,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   読解: 'bg-green-100 text-green-700',
 }
 
-export default function QuestionCard({ question, sessionId, onAnswered, onFlagged, reviewMode }: Props) {
+export default function QuestionCard({ question, sessionId, onAnswered, onFlagged, reviewMode, theme = 'pokemon' }: Props) {
   const [selected, setSelected] = useState<string | null>(question.user_answer)
   const [result, setResult] = useState<AnswerResult | null>(
     question.user_answer
@@ -34,6 +36,7 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
           is_correct: question.is_correct ?? false,
           correct_answer: question.question_data.correct_answer,
           explanation: question.question_data.explanation,
+          explanation_ko: question.question_data.explanation_ko,
         }
       : null
   )
@@ -41,6 +44,16 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
   const [currentFlag, setCurrentFlag] = useState<FlagStatus | null>(question.flag_status)
   const q = question.question_data
   const catColor = CATEGORY_COLORS[q.category] ?? 'bg-gray-100 text-gray-700'
+
+  const isKitty = theme === 'kitty'
+  const accentColor = isKitty ? 'border-pink-400 bg-pink-50' : 'border-red-400 bg-red-50'
+  const cardBorder = isKitty ? 'border-pink-200' : 'border-amber-100'
+  const unknownActive = isKitty
+    ? 'bg-pink-500 text-white border-pink-500'
+    : 'bg-red-500 text-white border-red-500'
+  const unknownIdle = isKitty
+    ? 'border-pink-300 text-pink-500 hover:bg-pink-50'
+    : 'border-red-300 text-red-500 hover:bg-red-50'
 
   async function handleAnswer(answer: string) {
     if (selected || reviewMode) return
@@ -71,7 +84,7 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
 
   function getOptionStyle(label: string) {
     if (!selected && !reviewMode) {
-      return 'border-gray-200 hover:border-red-400 hover:bg-red-50 cursor-pointer'
+      return `border-gray-200 ${isKitty ? 'hover:border-pink-400 hover:bg-pink-50' : 'hover:border-red-400 hover:bg-red-50'} cursor-pointer`
     }
     const correct = result?.correct_answer ?? question.question_data.correct_answer
     if (label === correct) return 'border-green-500 bg-green-50 text-green-800'
@@ -79,8 +92,11 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
     return 'border-gray-200 text-gray-400'
   }
 
+  const explanation = result?.explanation ?? q.explanation
+  const explanationKo = result?.explanation_ko ?? q.explanation_ko
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border-2 border-amber-100 p-6">
+    <div className={`bg-white rounded-2xl shadow-sm border-2 ${cardBorder} p-6`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <span className={`text-xs font-black px-2.5 py-1 rounded-full ${catColor}`}>
@@ -92,12 +108,10 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
               onClick={() => handleFlag('unknown')}
               disabled={flagging}
               className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
-                currentFlag === 'unknown'
-                  ? 'bg-red-500 text-white border-red-500'
-                  : 'border-red-300 text-red-500 hover:bg-red-50'
+                currentFlag === 'unknown' ? unknownActive : unknownIdle
               }`}
             >
-              ❓ わからない
+              ❓ 모르겠어요
             </button>
             <button
               onClick={() => handleFlag('uncertain')}
@@ -108,7 +122,7 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
                   : 'border-amber-400 text-amber-600 hover:bg-amber-50'
               }`}
             >
-              🤔 あいまい
+              🤔 애매해요
             </button>
           </div>
         )}
@@ -137,21 +151,30 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
 
       {/* Result feedback */}
       {(result || reviewMode) && (
-        <div className={`mt-4 p-4 rounded-xl border-2 ${
+        <div className={`mt-4 rounded-xl border-2 overflow-hidden ${
           reviewMode
-            ? 'bg-blue-50 border-blue-200'
+            ? 'border-blue-200'
             : result?.is_correct
-            ? 'bg-green-50 border-green-300'
-            : 'bg-red-50 border-red-300'
+            ? 'border-green-300'
+            : 'border-red-300'
         }`}>
           {!reviewMode && (
-            <p className={`font-black text-base mb-2 ${result?.is_correct ? 'text-green-700' : 'text-red-700'}`}>
-              {result?.is_correct ? '✅ 正解！やった！' : '❌ 不正解...'}
-            </p>
+            <div className={`px-4 py-2 font-black text-base ${result?.is_correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {result?.is_correct ? '✅ 정답!' : '❌ 오답...'}
+            </div>
           )}
-          <p className="text-gray-700 text-sm leading-relaxed">
-            <span className="font-black">解説：</span>{q.explanation}
-          </p>
+          {/* Korean explanation */}
+          {explanationKo && (
+            <div className="px-4 py-3 bg-pink-50 border-b border-pink-100">
+              <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
+              <p className="text-gray-700 text-sm leading-relaxed">{explanationKo}</p>
+            </div>
+          )}
+          {/* Japanese explanation */}
+          <div className="px-4 py-3 bg-blue-50">
+            <p className="text-xs font-black text-blue-600 mb-1">🇯🇵 日本語解説</p>
+            <p className="text-gray-700 text-sm leading-relaxed">{explanation}</p>
+          </div>
         </div>
       )}
     </div>
