@@ -31,11 +31,11 @@ export default function ExamSetupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count, category }),
       })
-      if (!res.ok) throw new Error()
-      const { sessionId } = await res.json()
-      router.push(`/exam/${sessionId}`)
-    } catch {
-      setError('問題の生成に失敗しました。もう一度お試しください。')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '不明なエラー')
+      router.push(`/exam/${data.sessionId}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '問題の生成に失敗しました。')
       setLoading(false)
     }
   }

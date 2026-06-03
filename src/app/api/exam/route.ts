@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id })
   } catch (err) {
-    console.error('Exam creation error:', err)
-    return NextResponse.json({ error: 'Failed to create exam' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Exam creation error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

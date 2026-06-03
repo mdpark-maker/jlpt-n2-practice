@@ -51,7 +51,7 @@ ${EXAMPLE_QUESTION}
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://vibe1-beta.vercel.app',
-      'X-Title': 'JLPT N2 模擬試験',
+      'X-Title': 'JLPT N2 Practice',
     },
     body: JSON.stringify({
       model: MODEL,
