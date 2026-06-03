@@ -13,7 +13,7 @@ const CATEGORY_PROMPTS: Record<ExamCategory, string> = {
 
 const EXAMPLE_QUESTION = `{
   "category": "語彙",
-  "question": "（　）に入る最も適切な言葉を選んでください。\n彼女はいつも笑顔で、周囲の人を（　）雰囲気を持っている。",
+  "question": "（　）に入る最も適切な言葉を選んでください。彼女はいつも笑顔で、周囲の人を（　）雰囲気を持っている。",
   "options": ["A. なごやかにする", "B. きびしくする", "C. さわがしくする", "D. くらくする"],
   "correct_answer": "A",
   "explanation": "「なごやかにする」は穏やかで和やかな雰囲気を作るという意味で、文脈に合います。"
@@ -73,6 +73,11 @@ ${EXAMPLE_QUESTION}
   const jsonMatch = content.match(/\[[\s\S]*\]/)
   if (!jsonMatch) throw new Error('Failed to parse questions from AI response')
 
-  const questions: QuestionData[] = JSON.parse(jsonMatch[0])
+  // Escape literal control characters inside JSON string values
+  const sanitized = jsonMatch[0].replace(/"(?:[^"\\]|\\.)*"/g, (match: string) =>
+    match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+  )
+
+  const questions: QuestionData[] = JSON.parse(sanitized)
   return questions
 }
