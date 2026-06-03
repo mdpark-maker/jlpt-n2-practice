@@ -48,7 +48,13 @@ Requirements:
     },
     body: JSON.stringify({
       model: MODEL,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a JLPT Japanese language exam expert. You MUST write all question text, answer options, and explanations in Japanese (日本語) only. Never use Korean (한국어), English, or any other language in your output.',
+        },
+        { role: 'user', content: prompt },
+      ],
       temperature: 0.8,
     }),
   })
