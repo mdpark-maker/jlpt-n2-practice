@@ -44,9 +44,14 @@ next-env.d.ts
 /test-screenshots/
 test-flow.mjs
 test-browser.mjs
+test-signup.mjs
+fix-env.mjs
+*.vercel.tmp
 
 # playwright
 /.playwright-mcp
 
 # claude code local settings
 /.claude/settings.local.json
+
+.vercel

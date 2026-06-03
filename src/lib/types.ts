@@ -32,3 +32,11 @@ export type ExamSession = {
 }
 
 export type ExamCategory = 'all' | '語彙' | '文法' | '読解' | '漢字'
+
+export type ReviewItem = {
+  id: string
+  user_id: string
+  question_data: QuestionData
+  original_flag_status: FlagStatus | null
+  created_at: string
+}

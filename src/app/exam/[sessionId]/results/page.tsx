@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ExamQuestion } from '@/lib/types'
+import RetrySection from './RetrySection'
 
 export default async function ResultsPage({
   params,
@@ -89,6 +90,9 @@ export default async function ResultsPage({
             })}
           </ul>
         </div>
+
+        {/* Retry wrong/flagged questions */}
+        <RetrySection questions={qs} />
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">

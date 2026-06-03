@@ -12,7 +12,7 @@ export async function POST(
 
   const { data: questions } = await supabase
     .from('exam_questions')
-    .select('is_correct')
+    .select('is_correct, flag_status, question_data')
     .eq('session_id', sessionId)
     .eq('user_id', user.id)
 
@@ -23,6 +23,19 @@ export async function POST(
     .update({ status: 'completed', score, completed_at: new Date().toISOString() })
     .eq('id', sessionId)
     .eq('user_id', user.id)
+
+  // Save wrong + flagged questions to persistent review_items
+  const toSave = (questions ?? [])
+    .filter(q => !q.is_correct || q.flag_status !== null)
+    .map(q => ({
+      user_id: user.id,
+      question_data: q.question_data,
+      original_flag_status: q.flag_status ?? null,
+    }))
+
+  if (toSave.length > 0) {
+    await supabase.from('review_items').insert(toSave)
+  }
 
   return NextResponse.json({ score })
 }
