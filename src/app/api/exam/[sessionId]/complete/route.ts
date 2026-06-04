@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Points awarded for perfect score by question count
+export const PERFECT_SCORE_POINTS: Record<number, number> = {
+  5:  1000,
+  10: 2000,
+  20: 5000,
+}
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
@@ -26,6 +33,7 @@ export async function POST(
   const score = questions?.filter(q => q.is_correct).length ?? 0
   const total = session?.total_questions ?? questions?.length ?? 0
   const isPerfect = score === total && total > 0
+  const pointsToAdd = isPerfect ? (PERFECT_SCORE_POINTS[total] ?? 1000) : 0
 
   await supabase
     .from('exam_sessions')
@@ -47,7 +55,6 @@ export async function POST(
     await supabase.from('review_items').insert(toSave)
   }
 
-  // Award 1000 points for perfect score
   let newPoints: number | null = null
   if (isPerfect) {
     const { data: profile } = await supabase
@@ -57,7 +64,7 @@ export async function POST(
       .single()
 
     const current = profile?.points ?? 0
-    newPoints = current + 1000
+    newPoints = current + pointsToAdd
 
     await supabase
       .from('profiles')
@@ -65,5 +72,5 @@ export async function POST(
       .eq('id', user.id)
   }
 
-  return NextResponse.json({ score, isPerfect, newPoints })
+  return NextResponse.json({ score, isPerfect, pointsAdded: pointsToAdd, newPoints })
 }

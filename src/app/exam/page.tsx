@@ -97,20 +97,26 @@ function ExamSetupInner() {
             <span>⚔️</span> 문제 수
           </h2>
           <div className="flex gap-3">
-            {COUNTS.map(n => (
+            {[
+              { n: 5,  reward: '1,000원' },
+              { n: 10, reward: '2,000원' },
+              { n: 20, reward: '5,000원' },
+            ].map(({ n, reward }) => (
               <button
                 key={n}
                 onClick={() => setCount(n)}
-                className={`flex-1 py-3 rounded-xl border-2 font-black transition-all text-sm ${
+                className={`flex-1 py-3 px-2 rounded-xl border-2 font-black transition-all text-sm flex flex-col items-center gap-1 ${
                   count === n
                     ? (isKitty ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-red-500 bg-red-50 text-red-700')
                     : 'border-gray-200 text-gray-500 hover:border-gray-300'
                 }`}
               >
-                {n}문제
+                <span>{n}문제</span>
+                <span className="text-xs font-bold text-yellow-600">만점 {reward}</span>
               </button>
             ))}
           </div>
+          <p className="text-xs text-gray-400 mt-3 text-center">💰 만점 달성 시 적립금 지급!</p>
         </div>
 
         {error && (

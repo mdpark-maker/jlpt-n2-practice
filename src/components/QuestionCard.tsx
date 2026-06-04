@@ -163,13 +163,13 @@ export default function QuestionCard({ question, sessionId, onAnswered, onFlagge
               {result?.is_correct ? '✅ 정답!' : '❌ 오답...'}
             </div>
           )}
-          {/* Korean explanation */}
-          {explanationKo && (
-            <div className="px-4 py-3 bg-pink-50 border-b border-pink-100">
-              <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
-              <p className="text-gray-700 text-sm leading-relaxed">{explanationKo}</p>
-            </div>
-          )}
+          {/* Korean explanation — always shown */}
+          <div className="px-4 py-3 bg-pink-50 border-b border-pink-100">
+            <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {explanationKo || <span className="text-pink-400 italic">업데이트 전 문제입니다. 새 시험에서 한국어 해설이 제공됩니다.</span>}
+            </p>
+          </div>
           {/* Japanese explanation */}
           <div className="px-4 py-3 bg-blue-50">
             <p className="text-xs font-black text-blue-600 mb-1">🇯🇵 日本語解説</p>

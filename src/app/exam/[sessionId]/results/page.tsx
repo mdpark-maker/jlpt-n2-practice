@@ -46,6 +46,9 @@ export default async function ResultsPage({
   const isKitty = level === 'n3'
   const currentPoints = profile?.points ?? 0
 
+  const PERFECT_POINTS: Record<number, number> = { 5: 1000, 10: 2000, 20: 5000 }
+  const pointsEarned = isPerfect ? (PERFECT_POINTS[total] ?? 1000) : 0
+
   const isWin = pct >= 70
   const isMid = pct >= 50
 
@@ -80,7 +83,7 @@ export default async function ResultsPage({
             <p className="text-3xl mb-1">🌟</p>
             <p className="text-xl font-black text-yellow-900">만점 달성!</p>
             <p className="text-yellow-800 font-bold text-sm mt-1">
-              1,000원 적립! (현재 누적: {currentPoints.toLocaleString()}원)
+              {pointsEarned.toLocaleString()}원 적립! (현재 누적: {currentPoints.toLocaleString()}원)
             </p>
           </div>
         )}

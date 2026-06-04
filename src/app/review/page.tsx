@@ -265,13 +265,14 @@ function ReviewInner() {
                             }`}>
                               {isCorrect ? '✅ 정답!' : `❌ 오답... 정답은 ${correct} 입니다`}
                             </div>
-                            {/* Korean explanation */}
-                            {item.question_data.explanation_ko && (
-                              <div className="bg-pink-50 border border-pink-200 rounded-xl px-4 py-3 text-sm text-pink-900">
-                                <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
-                                {item.question_data.explanation_ko}
-                              </div>
-                            )}
+                            {/* Korean explanation — always shown */}
+                            <div className="bg-pink-50 border border-pink-200 rounded-xl px-4 py-3 text-sm text-pink-900">
+                              <p className="text-xs font-black text-pink-600 mb-1">🇰🇷 한국어 해설</p>
+                              {item.question_data.explanation_ko
+                                ? item.question_data.explanation_ko
+                                : <span className="text-pink-400 italic">이 문제는 업데이트 전 저장된 문제입니다. 새 시험을 풀면 한국어 해설이 자동 제공됩니다.</span>
+                              }
+                            </div>
                             {/* Japanese explanation */}
                             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
                               <p className="text-xs font-black text-blue-600 mb-1">🇯🇵 日本語解説</p>
